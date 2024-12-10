@@ -43,9 +43,6 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
     const { dimensions, onLayout } = useComponentDimensions()
     const dataDimensions = calculateDataDimensions(dimensions, padding)
 
-    const tapGesture = React.createRef() // declared within constructor
-    const panGesture = React.createRef()
-
     const [lastTouch, setLastTouch] = React.useState<TouchEvent | undefined>(undefined)
     const [panX, setPanX] = React.useState<number>(viewport.initialOrigin.x)
     const [panY, setPanY] = React.useState<number>(viewport.initialOrigin.y)
@@ -58,7 +55,7 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
         y: yDomain,
       },
       panX,
-      panY
+      panY,
     )
 
     const setViewportOrigin = (origin: XYValue) => {
@@ -87,9 +84,9 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
           return true
         },
         300,
-        { leading: true, trailing: false }
+        { leading: true, trailing: false },
       ),
-      [JSON.stringify(dataDimensions)]
+      [JSON.stringify(dataDimensions)],
     )
 
     const handlePanEvent = (evt: NativeSyntheticEvent<any>) => {
@@ -146,8 +143,8 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
       listener: handlePanEvent,
     })
 
-    const tap = Gesture.Tap().withRef(tapGesture).enabled(!disableTouch).onStart(_onTouchGestureEvent)
-    const pan = Gesture.Pan().withRef(panGesture).enabled(!disableGestures).minDistance(10).onUpdate(_onPanGestureEvent).onEnd(_onPanGestureEvent)
+    const tap = Gesture.Tap().enabled(!disableTouch).onStart(_onTouchGestureEvent)
+    const pan = Gesture.Pan().enabled(!disableGestures).minDistance(10).onUpdate(_onPanGestureEvent).onEnd(_onPanGestureEvent)
 
     React.useImperativeHandle(ref, () => ({ setViewportOrigin }))
 
@@ -161,7 +158,7 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
         <GestureHandlerRootView>
           {!!dimensions && (
             <Animated.View style={{ width: dimensions.width, height: dimensions.height }}>
-              <GestureDetector geesture={Gesture.Exclusive(tap, pan)}>
+              <GestureDetector gesture={Gesture.Exclusive(tap, pan)}>
                 <Animated.View style={{ width: dimensions.width, height: dimensions.height }}>
                   <ChartContextProvider
                     value={{
@@ -198,7 +195,7 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
       </View>
     )
   }),
-  fastEqual
+  fastEqual,
 )
 
 export { Chart }

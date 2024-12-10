@@ -26,7 +26,8 @@
     "react": "18.3.1",
     "react-native": "^0.76.5",
     "react-native-svg": "^15.10.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "react-native-gesture-handler": "^2.21.2"
   },
   "files": [
     "lib/**/*"
@@ -68,10 +69,10 @@
   },
   "scripts": {
     "docs:deploy": "./deploy_docs.sh",
-    "prepare": "yarn tsc",
-    "prepublish": "yarn tsc",
-    "release": "yarn np",
-    "test": "yarn jest"
+    "prepare": "tsc",
+    "prepublish": "tsc",
+    "release": "np",
+    "test": "jest"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
