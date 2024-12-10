@@ -1,7 +1,7 @@
 import * as React from 'react'
 import deepmerge from 'deepmerge'
-import { Animated, NativeSyntheticEvent, View, ViewStyle } from 'react-native'
-import { GestureDetector, Gesture, State, GestureHandlerRootView } from 'react-native-gesture-handler'
+import { Animated, View, ViewStyle } from 'react-native'
+import { GestureDetector, Gesture, State, GestureHandlerRootView, GestureUpdateEvent, PanGestureHandlerEventPayload } from 'react-native-gesture-handler'
 import fastEqual from 'fast-deep-equal/react'
 import clamp from 'lodash.clamp'
 import minBy from 'lodash.minby'
@@ -89,37 +89,37 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
       [JSON.stringify(dataDimensions)],
     )
 
-    const handlePanEvent = (evt: NativeSyntheticEvent<any>) => {
+    const handlePanEvent = (evt: GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
       if (dataDimensions) {
         const factorX = viewport.size.width / dataDimensions.width
-        setPanX((offset.x as any)._value - evt.nativeEvent.translationX * factorX)
+        setPanX((offset.x as any)._value - evt.translationX * factorX)
 
         const factorY = viewport.size.height / dataDimensions.height
-        setPanY((offset.y as any)._value + evt.nativeEvent.translationY * factorY)
+        setPanY((offset.y as any)._value + evt.translationY * factorY)
 
-        if (evt.nativeEvent.state === State.END) {
-          offset.x.setValue(clamp((offset.x as any)._value - evt.nativeEvent.translationX * factorX, xDomain.min, xDomain.max - viewport.size.width))
-          offset.y.setValue(clamp((offset.y as any)._value + evt.nativeEvent.translationY * factorY, yDomain.min, yDomain.max - viewport.size.height))
+        if (evt.state === State.END) {
+          offset.x.setValue(clamp((offset.x as any)._value - evt.translationX * factorX, xDomain.min, xDomain.max - viewport.size.width))
+          offset.y.setValue(clamp((offset.y as any)._value + evt.translationY * factorY, yDomain.min, yDomain.max - viewport.size.height))
           setLastTouch({
             position: {
-              x: clamp(evt.nativeEvent.x - padding.left, 0, dataDimensions.width),
-              y: clamp(evt.nativeEvent.y - padding.top, 0, dataDimensions.height),
+              x: clamp(evt.x - padding.left, 0, dataDimensions.width),
+              y: clamp(evt.y - padding.top, 0, dataDimensions.height),
             },
             translation: {
-              x: evt.nativeEvent.translationX,
-              y: evt.nativeEvent.translationY,
+              x: evt.translationX,
+              y: evt.translationY,
             },
             type: 'panEnd',
           })
         } else {
           setLastTouch({
             position: {
-              x: clamp(evt.nativeEvent.x - padding.left, 0, dataDimensions.width),
-              y: clamp(evt.nativeEvent.y - padding.top, 0, dataDimensions.height),
+              x: clamp(evt.x - padding.left, 0, dataDimensions.width),
+              y: clamp(evt.y - padding.top, 0, dataDimensions.height),
             },
             translation: {
-              x: evt.nativeEvent.translationX,
-              y: evt.nativeEvent.translationY,
+              x: evt.translationX,
+              y: evt.translationY,
             },
             type: 'pan',
           })
@@ -128,23 +128,10 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
       return true
     }
 
-    const _onTouchGestureEvent = Animated.event<any>([{ nativeEvent: {} }], {
-      useNativeDriver: true,
-      listener: (evt) => {
-        // Necessary to debounce function, see https://medium.com/trabe/react-syntheticevent-reuse-889cd52981b6
-        if (evt.nativeEvent.state === State.ACTIVE) {
-          handleTouchEvent(evt.nativeEvent.x, evt.nativeEvent.y)
-        }
-      },
-    })
-
-    const _onPanGestureEvent = Animated.event<any>([{ nativeEvent: {} }], {
-      useNativeDriver: true,
-      listener: handlePanEvent,
-    })
-
-    const tap = Gesture.Tap().enabled(!disableTouch).onStart(_onTouchGestureEvent)
-    const pan = Gesture.Pan().enabled(!disableGestures).minDistance(10).onUpdate(_onPanGestureEvent).onEnd(_onPanGestureEvent)
+    const tap = Gesture.Tap()
+      .enabled(!disableTouch)
+      .onStart((e) => handleTouchEvent(e.x, e.y))
+    const pan = Gesture.Pan().enabled(!disableGestures).minDistance(10).onUpdate(handlePanEvent)
 
     React.useImperativeHandle(ref, () => ({ setViewportOrigin }))
 
