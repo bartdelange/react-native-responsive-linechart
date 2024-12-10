@@ -1,7 +1,7 @@
 import * as React from 'react'
 import deepmerge from 'deepmerge'
 import { Animated, NativeSyntheticEvent, View, ViewStyle } from 'react-native'
-import { TapGestureHandler, PanGestureHandler, State, GestureHandlerRootView } from 'react-native-gesture-handler'
+import { GestureDetector, Gesture, State, GestureHandlerRootView } from 'react-native-gesture-handler'
 import fastEqual from 'fast-deep-equal/react'
 import clamp from 'lodash.clamp'
 import minBy from 'lodash.minby'
@@ -37,8 +37,8 @@ export type ChartHandle = {
   setViewportOrigin: (origin: XYValue) => void
 }
 
-const Chart: React.FC<Props> = React.memo(
-  React.forwardRef<ChartHandle, Props>((props, ref) => {
+const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
+  React.forwardRef<ChartHandle, React.PropsWithChildren<Props>>((props, ref) => {
     const { style, children, data = [], padding, xDomain, yDomain, viewport, disableGestures, disableTouch } = deepmerge(computeDefaultProps(props), props)
     const { dimensions, onLayout } = useComponentDimensions()
     const dataDimensions = calculateDataDimensions(dimensions, padding)
@@ -146,6 +146,11 @@ const Chart: React.FC<Props> = React.memo(
       listener: handlePanEvent,
     })
 
+    const tap = Gesture.Tap().withRef(tapGesture).enabled(!disableTouch).onStart(_onTouchGestureEvent)
+    const pan = Gesture.Pan().withRef(panGesture).enabled(!disableGestures).minDistance(10).onUpdate(_onPanGestureEvent).onEnd(_onPanGestureEvent)
+
+    React.useImperativeHandle(ref, () => ({ setViewportOrigin }))
+
     const childComponents = React.Children.toArray(children)
     // undefined because ForwardRef (Line) has name undefined
     const lineAndAreaComponents = childComponents.filter((c) => ['Area', undefined].includes((c as any)?.type?.name))
@@ -155,48 +160,39 @@ const Chart: React.FC<Props> = React.memo(
       <View style={style} onLayout={onLayout}>
         <GestureHandlerRootView>
           {!!dimensions && (
-            <TapGestureHandler enabled={!disableTouch} onHandlerStateChange={_onTouchGestureEvent} ref={tapGesture}>
-              <Animated.View style={{ width: dimensions.width, height: dimensions.height }}>
-                <PanGestureHandler
-                  enabled={!disableGestures}
-                  minDeltaX={10}
-                  minDeltaY={10}
-                  onGestureEvent={_onPanGestureEvent}
-                  onHandlerStateChange={_onPanGestureEvent}
-                  ref={panGesture}
-                >
-                  <Animated.View style={{ width: dimensions.width, height: dimensions.height }}>
-                    <ChartContextProvider
-                      value={{
-                        data,
-                        dimensions: dataDimensions,
-                        domain: {
-                          x: xDomain,
-                          y: yDomain,
-                        },
-                        viewportDomain,
-                        viewportOrigin: scalePointToDimensions({ x: viewportDomain.x.min, y: viewportDomain.y.max }, viewportDomain, dataDimensions),
-                        viewport,
-                        lastTouch,
-                      }}
-                    >
-                      <Svg width={dimensions.width} height={dimensions.height}>
-                        <G translateX={padding.left} translateY={padding.top}>
-                          {otherComponents}
-                          <Defs>
-                            {/* Mask to fix viewport overflow bugs */}
-                            <Mask id="Mask" x={0} y={0} width={dataDimensions.width} height={dataDimensions.height}>
-                              <Rect x="0" y="0" width={dataDimensions.width} height={dataDimensions.height} fill="#ffffff" />
-                            </Mask>
-                          </Defs>
-                          {lineAndAreaComponents}
-                        </G>
-                      </Svg>
-                    </ChartContextProvider>
-                  </Animated.View>
-                </PanGestureHandler>
-              </Animated.View>
-            </TapGestureHandler>
+            <Animated.View style={{ width: dimensions.width, height: dimensions.height }}>
+              <GestureDetector geesture={Gesture.Exclusive(tap, pan)}>
+                <Animated.View style={{ width: dimensions.width, height: dimensions.height }}>
+                  <ChartContextProvider
+                    value={{
+                      data,
+                      dimensions: dataDimensions,
+                      domain: {
+                        x: xDomain,
+                        y: yDomain,
+                      },
+                      viewportDomain,
+                      viewportOrigin: scalePointToDimensions({ x: viewportDomain.x.min, y: viewportDomain.y.max }, viewportDomain, dataDimensions),
+                      viewport,
+                      lastTouch,
+                    }}
+                  >
+                    <Svg width={dimensions.width} height={dimensions.height}>
+                      <G translateX={padding.left} translateY={padding.top}>
+                        {otherComponents}
+                        <Defs>
+                          {/* Mask to fix viewport overflow bugs */}
+                          <Mask id="Mask" x={0} y={0} width={dataDimensions.width} height={dataDimensions.height}>
+                            <Rect x="0" y="0" width={dataDimensions.width} height={dataDimensions.height} fill="#ffffff" />
+                          </Mask>
+                        </Defs>
+                        {lineAndAreaComponents}
+                      </G>
+                    </Svg>
+                  </ChartContextProvider>
+                </Animated.View>
+              </GestureDetector>
+            </Animated.View>
           )}
         </GestureHandlerRootView>
       </View>
