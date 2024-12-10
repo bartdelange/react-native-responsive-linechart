@@ -130,8 +130,9 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
 
     const tap = Gesture.Tap()
       .enabled(!disableTouch)
+      .runOnJS(true)
       .onStart((e) => handleTouchEvent(e.x, e.y))
-    const pan = Gesture.Pan().enabled(!disableGestures).minDistance(10).onUpdate(handlePanEvent)
+    const pan = Gesture.Pan().enabled(!disableGestures).runOnJS(true).minDistance(10).onUpdate(handlePanEvent)
 
     React.useImperativeHandle(ref, () => ({ setViewportOrigin }))
 
