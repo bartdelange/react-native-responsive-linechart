@@ -1,12 +1,11 @@
 import * as React from 'react'
 import deepmerge from 'deepmerge'
 import { Animated, View, ViewStyle } from 'react-native'
-import { GestureDetector, Gesture, State, GestureHandlerRootView, GestureUpdateEvent, PanGestureHandlerEventPayload } from 'react-native-gesture-handler'
+import { GestureDetector, Gesture, State, GestureHandlerRootView } from 'react-native-gesture-handler'
 import fastEqual from 'fast-deep-equal/react'
 import clamp from 'lodash.clamp'
 import minBy from 'lodash.minby'
 import maxBy from 'lodash.maxby'
-import debounce from 'lodash.debounce'
 import Svg, { G, Mask, Defs, Rect } from 'react-native-svg'
 import { useComponentDimensions } from './useComponentDimensions'
 import { AxisDomain, ChartDataPoint, Padding, ViewPort, TouchEvent, XYValue } from './types'
@@ -68,71 +67,65 @@ const Chart: React.FC<React.PropsWithChildren<Props>> = React.memo(
 
     React.useImperativeHandle(ref, () => ({ setViewportOrigin }))
 
-    const handleTouchEvent = React.useCallback(
-      debounce(
-        (x: number, y: number) => {
-          if (dataDimensions) {
-            setLastTouch({
-              position: {
-                x: clamp(x - padding.left, 0, dataDimensions.width),
-                y: clamp(y - padding.top, 0, dataDimensions.height),
-              },
-              type: 'tap',
-            })
-          }
-
-          return true
-        },
-        300,
-        { leading: true, trailing: false },
-      ),
-      [JSON.stringify(dataDimensions)],
-    )
-
-    const handlePanEvent = (evt: GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
-      if (dataDimensions) {
-        const factorX = viewport.size.width / dataDimensions.width
-        setPanX((offset.x as any)._value - evt.translationX * factorX)
-
-        const factorY = viewport.size.height / dataDimensions.height
-        setPanY((offset.y as any)._value + evt.translationY * factorY)
-
-        if (evt.state === State.END) {
-          offset.x.setValue(clamp((offset.x as any)._value - evt.translationX * factorX, xDomain.min, xDomain.max - viewport.size.width))
-          offset.y.setValue(clamp((offset.y as any)._value + evt.translationY * factorY, yDomain.min, yDomain.max - viewport.size.height))
-          setLastTouch({
-            position: {
-              x: clamp(evt.x - padding.left, 0, dataDimensions.width),
-              y: clamp(evt.y - padding.top, 0, dataDimensions.height),
-            },
-            translation: {
-              x: evt.translationX,
-              y: evt.translationY,
-            },
-            type: 'panEnd',
-          })
-        } else {
-          setLastTouch({
-            position: {
-              x: clamp(evt.x - padding.left, 0, dataDimensions.width),
-              y: clamp(evt.y - padding.top, 0, dataDimensions.height),
-            },
-            translation: {
-              x: evt.translationX,
-              y: evt.translationY,
-            },
-            type: 'pan',
-          })
-        }
-      }
-      return true
-    }
-
     const tap = Gesture.Tap()
       .enabled(!disableTouch)
       .runOnJS(true)
-      .onStart((e) => handleTouchEvent(e.x, e.y))
-    const pan = Gesture.Pan().enabled(!disableGestures).runOnJS(true).minDistance(10).onUpdate(handlePanEvent)
+      .onStart((e) => {
+        if (dataDimensions) {
+          setLastTouch({
+            position: {
+              x: clamp(e.x - padding.left, 0, dataDimensions.width),
+              y: clamp(e.y - padding.top, 0, dataDimensions.height),
+            },
+            type: 'tap',
+          })
+        }
+
+        return true
+      })
+
+    const pan = Gesture.Pan()
+      .enabled(!disableGestures)
+      .runOnJS(true)
+      .minDistance(10)
+      .onUpdate((evt) => {
+        if (dataDimensions) {
+          const factorX = viewport.size.width / dataDimensions.width
+          setPanX((offset.x as any)._value - evt.translationX * factorX)
+
+          const factorY = viewport.size.height / dataDimensions.height
+          setPanY((offset.y as any)._value + evt.translationY * factorY)
+
+          if (evt.state === State.END) {
+            offset.x.setValue(clamp((offset.x as any)._value - evt.translationX * factorX, xDomain.min, xDomain.max - viewport.size.width))
+            offset.y.setValue(clamp((offset.y as any)._value + evt.translationY * factorY, yDomain.min, yDomain.max - viewport.size.height))
+            setLastTouch({
+              position: {
+                x: clamp(evt.x - padding.left, 0, dataDimensions.width),
+                y: clamp(evt.y - padding.top, 0, dataDimensions.height),
+              },
+              translation: {
+                x: evt.translationX,
+                y: evt.translationY,
+              },
+              type: 'panEnd',
+            })
+          } else {
+            setLastTouch({
+              position: {
+                x: clamp(evt.x - padding.left, 0, dataDimensions.width),
+                y: clamp(evt.y - padding.top, 0, dataDimensions.height),
+              },
+              translation: {
+                x: evt.translationX,
+                y: evt.translationY,
+              },
+              type: 'pan',
+            })
+          }
+        }
+        return true
+      })
 
     React.useImperativeHandle(ref, () => ({ setViewportOrigin }))
 
